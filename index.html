@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ClosePack — Monthly client packs for bookkeepers</title>
   <meta name="description" content="Turn QuickBooks or Xero exports into branded monthly client PDFs with clear KPIs and plain-English commentary. Built for independent bookkeepers." />
+  <link rel="icon" href="logo.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="logo.svg" />
   <style>
     :root {
       --bg: #0f1419;
@@ -25,6 +27,24 @@
       line-height: 1.55;
     }
     .wrap { max-width: 880px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+    .brand img {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: block;
+    }
+    .brand-name {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .brand-name span { color: var(--accent); }
     .badge {
       display: inline-block;
       font-size: 0.75rem;
@@ -102,12 +122,18 @@
     }
     .note { font-size: 0.85rem; color: var(--muted); margin-top: 0.5rem; }
     footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.85rem; }
+    .footer-brand { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+    .footer-brand img { width: 28px; height: 28px; border-radius: 7px; }
     .compare { font-size: 0.9rem; color: var(--muted); }
     .compare strong { color: var(--warn); }
   </style>
 </head>
 <body>
   <div class="wrap">
+    <header class="brand">
+      <img src="logo.svg" width="48" height="48" alt="ClosePack logo" />
+      <div class="brand-name">Close<span>Pack</span></div>
+    </header>
     <div class="badge">Private beta · for bookkeepers</div>
     <h1>Month-end client packs in minutes, not hours.</h1>
     <p class="lede">
@@ -121,7 +147,7 @@
     <div class="grid">
       <div class="card">
         <h3>1. Upload the export</h3>
-        <p>Drop a P&L / balance sheet CSV or Excel from QuickBooks Online or Xero. Live sync comes later.</p>
+        <p>Drop a P&amp;L / balance sheet CSV or Excel from QuickBooks Online or Xero. Live sync comes later.</p>
       </div>
       <div class="card">
         <h3>2. Add your brand</h3>
@@ -152,7 +178,7 @@
           <li>Up to 25 client packs / month</li>
           <li>Branded PDF export</li>
           <li>AI commentary you can edit before send</li>
-          <li>CSV / Excel upload (QBO & Xero layouts)</li>
+          <li>CSV / Excel upload (QBO &amp; Xero layouts)</li>
         </ul>
       </div>
       <div class="card">
@@ -199,7 +225,11 @@
       </form>
     </section>
     <footer>
-      ClosePack — an experiment building real software for bookkeepers. Not affiliated with Intuit, QuickBooks, or Xero.
+      <div class="footer-brand">
+        <img src="logo.svg" width="28" height="28" alt="" />
+        <strong>ClosePack</strong>
+      </div>
+      An experiment building real software for bookkeepers. Not affiliated with Intuit, QuickBooks, or Xero.
     </footer>
   </div>
   <script>

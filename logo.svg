@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="ClosePack">
+  <rect width="128" height="128" rx="28" fill="#0f1419"/>
+  <path d="M34 30h46l18 18v50c0 4.4-3.6 8-8 8H34c-4.4 0-8-3.6-8-8V38c0-4.4 3.6-8 8-8z" fill="none" stroke="#ffffff" stroke-width="7" stroke-linejoin="round"/>
+  <path d="M80 30v16c0 3.3 2.7 6 6 6h16" fill="none" stroke="#ffffff" stroke-width="7" stroke-linejoin="round"/>
+  <text x="64" y="88" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="54" font-weight="700" fill="#3dd6c6">C</text>
+</svg>
