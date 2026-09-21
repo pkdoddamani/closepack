@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ClosePack — Monthly client packs for bookkeepers</title>
+  <meta name="description" content="Turn QuickBooks or Xero exports into branded monthly client PDFs with clear KPIs and plain-English commentary. Built for independent bookkeepers." />
+  <style>
+    :root {
+      --bg: #0f1419;
+      --card: #1a222c;
+      --text: #e8eef4;
+      --muted: #9aa8b5;
+      --accent: #3dd6c6;
+      --accent-dim: #2a9d8f;
+      --line: #2a3540;
+      --warn: #f4a261;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+    }
+    .wrap { max-width: 880px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+    .badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--accent);
+      border: 1px solid var(--accent-dim);
+      padding: 0.25rem 0.6rem;
+      border-radius: 999px;
+      margin-bottom: 1rem;
+    }
+    h1 {
+      font-size: clamp(1.85rem, 4vw, 2.6rem);
+      line-height: 1.15;
+      margin: 0 0 1rem;
+      font-weight: 700;
+    }
+    .lede { font-size: 1.15rem; color: var(--muted); max-width: 38rem; margin: 0 0 1.75rem; }
+    .cta-row { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-bottom: 2.5rem; }
+    .btn {
+      background: var(--accent);
+      color: #06221f;
+      border: none;
+      font-weight: 700;
+      font-size: 1rem;
+      padding: 0.8rem 1.25rem;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .btn:hover { filter: brightness(1.05); }
+    .ghost { color: var(--muted); font-size: 0.95rem; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+      margin: 2rem 0;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 0.75rem;
+      padding: 1.15rem 1.2rem;
+    }
+    .card h3 { margin: 0 0 0.4rem; font-size: 1.05rem; }
+    .card p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+    section { margin: 2.75rem 0; }
+    h2 { font-size: 1.35rem; margin: 0 0 0.85rem; }
+    ul { margin: 0; padding-left: 1.2rem; color: var(--muted); }
+    li { margin-bottom: 0.45rem; }
+    .price { display: flex; flex-wrap: wrap; gap: 1.25rem; align-items: stretch; }
+    .price .card { flex: 1; min-width: 240px; }
+    .amount { font-size: 2.2rem; font-weight: 700; color: var(--accent); margin: 0.3rem 0; }
+    .amount span { font-size: 1rem; color: var(--muted); font-weight: 500; }
+    form {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+      display: grid;
+      gap: 0.75rem;
+      max-width: 420px;
+    }
+    label { font-size: 0.85rem; color: var(--muted); }
+    input, select {
+      width: 100%;
+      padding: 0.7rem 0.75rem;
+      border-radius: 0.45rem;
+      border: 1px solid var(--line);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 1rem;
+    }
+    .note { font-size: 0.85rem; color: var(--muted); margin-top: 0.5rem; }
+    footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.85rem; }
+    .compare { font-size: 0.9rem; color: var(--muted); }
+    .compare strong { color: var(--warn); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="badge">Private beta · for bookkeepers</div>
+    <h1>Month-end client packs in minutes, not hours.</h1>
+    <p class="lede">
+      ClosePack turns a QuickBooks or Xero export into a branded PDF your clients will actually read —
+      KPIs, trends, and plain-English commentary — without assembling another spreadsheet deck.
+    </p>
+    <div class="cta-row">
+      <a class="btn" href="#waitlist">Join the waitlist</a>
+      <span class="ghost">Founding price locked at $79/mo for early users</span>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <h3>1. Upload the export</h3>
+        <p>Drop a P&amp;L / balance sheet CSV or Excel from QuickBooks Online or Xero. Live sync comes later.</p>
+      </div>
+      <div class="card">
+        <h3>2. Add your brand</h3>
+        <p>Logo, colors, and a short firm intro once. Every pack looks like it came from you.</p>
+      </div>
+      <div class="card">
+        <h3>3. Send the PDF</h3>
+        <p>Download a client-ready pack with KPI cards and a narrative a non-accountant can follow.</p>
+      </div>
+    </div>
+    <section>
+      <h2>Who this is for</h2>
+      <ul>
+        <li>Independent bookkeepers and tiny firms with ~10–40 monthly clients</li>
+        <li>People who outgrew copy-paste Excel packs but do not need a full forecasting suite</li>
+        <li>Anyone paying per-company reporting tools that get expensive as the client list grows</li>
+      </ul>
+      <p class="compare" style="margin-top:1rem">
+        Fathom Starter is about <strong>A$59 per company / month</strong> at the entry tier.
+        ClosePack is a flat <strong>$79/mo</strong> for up to 25 packs — built for the recurring narrative job, not deep BI.
+      </p>
+    </section>
+    <section class="price">
+      <div class="card">
+        <h3>Founding plan</h3>
+        <p class="amount">$79 <span>/ month</span></p>
+        <ul>
+          <li>Up to 25 client packs / month</li>
+          <li>Branded PDF export</li>
+          <li>AI commentary you can edit before send</li>
+          <li>CSV / Excel upload (QBO &amp; Xero layouts)</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Not trying to be</h3>
+        <ul>
+          <li>A full Fathom / Spotlight replacement</li>
+          <li>Cash-flow forecasting or consolidations (yet)</li>
+          <li>Another generic “AI for accountants” chat box</li>
+        </ul>
+      </div>
+    </section>
+    <section id="waitlist">
+      <h2>Join the waitlist</h2>
+      <p class="lede" style="font-size:1rem;margin-bottom:1rem">
+        Tell us how you close month-end today. We are onboarding a small group of bookkeepers for paid pilots.
+      </p>
+      <form id="waitlist-form" action="#" method="post">
+        <div>
+          <label for="email">Work email</label>
+          <input id="email" name="email" type="email" required placeholder="you@yourfirm.com" />
+        </div>
+        <div>
+          <label for="clients">Monthly client packs you produce</label>
+          <select id="clients" name="clients" required>
+            <option value="" disabled selected>Select a range</option>
+            <option>1–10</option>
+            <option>11–25</option>
+            <option>26–50</option>
+            <option>51+</option>
+          </select>
+        </div>
+        <div>
+          <label for="stack">Main stack</label>
+          <select id="stack" name="stack" required>
+            <option value="" disabled selected>Select one</option>
+            <option>QuickBooks Online</option>
+            <option>Xero</option>
+            <option>Both / other</option>
+          </select>
+        </div>
+        <button class="btn" type="submit">Request early access</button>
+        <p class="note" id="form-status">Form stores locally until we connect email capture. No spam.</p>
+      </form>
+    </section>
+    <footer>
+      ClosePack — an experiment building real software for bookkeepers. Not affiliated with Intuit, QuickBooks, or Xero.
+    </footer>
+  </div>
+  <script>
+    (function () {
+      var form = document.getElementById("waitlist-form");
+      var status = document.getElementById("form-status");
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var data = {
+          email: form.email.value.trim(),
+          clients: form.clients.value,
+          stack: form.stack.value,
+          at: new Date().toISOString()
+        };
+        try {
+          var key = "closepack_waitlist";
+          var list = JSON.parse(localStorage.getItem(key) || "[]");
+          list.push(data);
+          localStorage.setItem(key, JSON.stringify(list));
+          status.textContent = "You're on the list (" + data.email + "). We'll email when a pilot seat opens.";
+          form.reset();
+        } catch (err) {
+          status.textContent = "Saved in this browser. For production we need a real email endpoint.";
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
