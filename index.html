@@ -57,6 +57,7 @@
       display: inline-block;
     }
     .btn:hover { filter: brightness(1.05); }
+    .btn:disabled { opacity: 0.6; cursor: wait; }
     .ghost { color: var(--muted); font-size: 0.95rem; }
     .grid {
       display: grid;
@@ -120,7 +121,7 @@
     <div class="grid">
       <div class="card">
         <h3>1. Upload the export</h3>
-        <p>Drop a P&amp;L / balance sheet CSV or Excel from QuickBooks Online or Xero. Live sync comes later.</p>
+        <p>Drop a P&L / balance sheet CSV or Excel from QuickBooks Online or Xero. Live sync comes later.</p>
       </div>
       <div class="card">
         <h3>2. Add your brand</h3>
@@ -151,7 +152,7 @@
           <li>Up to 25 client packs / month</li>
           <li>Branded PDF export</li>
           <li>AI commentary you can edit before send</li>
-          <li>CSV / Excel upload (QBO &amp; Xero layouts)</li>
+          <li>CSV / Excel upload (QBO & Xero layouts)</li>
         </ul>
       </div>
       <div class="card">
@@ -168,7 +169,8 @@
       <p class="lede" style="font-size:1rem;margin-bottom:1rem">
         Tell us how you close month-end today. We are onboarding a small group of bookkeepers for paid pilots.
       </p>
-      <form id="waitlist-form" action="#" method="post">
+      <form id="waitlist-form" action="https://formspree.io/f/xnpnpvko" method="POST">
+        <input type="hidden" name="_subject" value="ClosePack waitlist signup" />
         <div>
           <label for="email">Work email</label>
           <input id="email" name="email" type="email" required placeholder="you@yourfirm.com" />
@@ -192,8 +194,8 @@
             <option>Both / other</option>
           </select>
         </div>
-        <button class="btn" type="submit">Request early access</button>
-        <p class="note" id="form-status">Form stores locally until we connect email capture. No spam.</p>
+        <button class="btn" type="submit" id="waitlist-submit">Request early access</button>
+        <p class="note" id="form-status">No spam. We only email about the pilot.</p>
       </form>
     </section>
     <footer>
@@ -204,24 +206,30 @@
     (function () {
       var form = document.getElementById("waitlist-form");
       var status = document.getElementById("form-status");
+      var btn = document.getElementById("waitlist-submit");
       form.addEventListener("submit", function (e) {
         e.preventDefault();
-        var data = {
-          email: form.email.value.trim(),
-          clients: form.clients.value,
-          stack: form.stack.value,
-          at: new Date().toISOString()
-        };
-        try {
-          var key = "closepack_waitlist";
-          var list = JSON.parse(localStorage.getItem(key) || "[]");
-          list.push(data);
-          localStorage.setItem(key, JSON.stringify(list));
-          status.textContent = "You're on the list (" + data.email + "). We'll email when a pilot seat opens.";
-          form.reset();
-        } catch (err) {
-          status.textContent = "Saved in this browser. For production we need a real email endpoint.";
-        }
+        btn.disabled = true;
+        status.textContent = "Submitting…";
+        var data = new FormData(form);
+        fetch(form.action, {
+          method: "POST",
+          body: data,
+          headers: { Accept: "application/json" }
+        }).then(function (res) {
+          if (res.ok) {
+            status.textContent = "You're on the list. Check your inbox if Formspree asks you to confirm.";
+            form.reset();
+          } else {
+            return res.json().then(function (err) {
+              throw new Error((err && err.error) || "Submit failed");
+            });
+          }
+        }).catch(function () {
+          status.textContent = "Something went wrong. Email us or try again in a minute.";
+        }).finally(function () {
+          btn.disabled = false;
+        });
       });
     })();
   </script>
