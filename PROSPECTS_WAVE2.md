@@ -1,42 +1,97 @@
-# ClosePack prospects — wave 2 (multi-channel)
+# ClosePack prospects — wave 2 (2026-09-21)
 
-Rules: public info only · personalize · engage-first on social · no bots · soft research ask.
+Public channels only. No invented emails or handles. Wave 1 firm emails live in `PROSPECTS.md`.
+
+**Product:** ClosePack = $79/mo branded monthly client PDF packs for independent bookkeepers.
+**Anti-spam:** Engage-first on social. Email only where a public contact is published.
 
 Live: https://pkdoddamani.github.io/closepack/
 
-## A. Creators / educators (engage first, then soft ask)
+## Top prospects (engage first)
 
-| Who | Channel | URL | Why fit | First touch |
-|---|---|---|---|---|
-| Serena Shoup — Ambitious Bookkeeper | IG / YT / podcast | https://www.instagram.com/ambitiousbookkeeper · https://www.ambitiousbookkeeper.com | Audience = growing indie bookkeepers | Comment/share a post about client delivery; later ask about month-end pack time |
-| Bookkeepers On Fire (Deb & Donna) | Podcast / YT / LinkedIn | https://open.spotify.com/show/40dz9xC79YNLYZTx7FZw7Q · https://www.youtube.com/@dodigits | Systems + value pricing for bookkeepers | Listen + reply to an episode topic about reporting |
-| Jessica Fox / Bookkeeping Systems Lounge | Community | https://bksystemslounge.club/ | Bookkeepers building systems | Join, help others, no pitch week 1 |
-| Zach Pasquariello | YT / X / LinkedIn | https://x.com/zachpasq · https://www.linkedin.com/in/zachpasq/ | Posts real month-end close workflows | Comment on month-end video; no cold pitch |
-| Accounting Adventures | Podcast / social | https://www.accountingadventures.com.au | Month-end tech & close episodes | Engage on month-end episode |
+1. **Samantha Baker — Opal Owl Ledgers** — LinkedIn post on what she sends clients monthly  
+   https://www.linkedin.com/in/samantha-baker-858342ba  
+   Post: https://www.linkedin.com/posts/samantha-baker-858342ba_heres-what-i-actually-send-clients-every-activity-7442267011771949056-69vj
 
-## B. Solo / small firms
+2. **Katie Ferro, CPA — Orderly Accounting** — teaches which monthly reports to send  
+   https://www.katieferro.com/blog/bookkeeping-reports-102  
+   LinkedIn: https://www.linkedin.com/in/orderlyaccountingbykatie
 
-Wave 1 (send cards already in chat):
-- Kristi — Ledger — kristi@ledgerbookkeepingco.com
-- Better View — bookkeeping.betterview@gmail.com
-- Lirai — info@liraivirtualbookkeeping.com
+3. **Claire Hancott — Profit Cash Growth** — monthly management packs brand  
+   https://www.profitcashgrowth.com/post/what-should-monthly-management-accounts-look-like  
+   LinkedIn: https://www.linkedin.com/in/claire-hancott
 
-Next (open site → published contact only):
-Amanda Beck Bookkeeping, April's Bookkeeping, Bookkeepers Lane, PinchHit Bookkeeping, TopLine Bookkeeping, Rosario KeepsBooks, Upward Bookkeeping, Beautiful Books by JLar — sourced from https://www.numbercrunchers.co/directory
+4. **Jo Wood / Zoe Whitman — 6 Figure Bookkeeper** — coaches packaging monthly services  
+   https://www.6figurebookkeeper.com/  
+   Do **not** pitch inside FB Club (promo-free).
 
-Directories: Number Crunchers, QuickBooks ProAdvisor finder, Xero advisors.
+5. **Michael Palmer — The Successful Bookkeeper** — podcast + large bookkeeper community  
+   https://www.thesuccessfulbookkeeper.com/about
 
-## C. Communities
+6. **Donna Lynch — Every Penny Accounts** — “accounts that actually get read”; public email  
+   https://www.everypennyaccounts.co.uk/helping-smbs-thrive/  
+   Email: info@everypennyaccounts.co.uk
 
-- 6 Figure Bookkeepers Club (FB) — usually no promo — listen only
-- Bookkeeping Systems Lounge — https://bksystemslounge.club/
-- Indie Hackers — founder research OK
-- r/Bookkeeping — skip product research
+7. **Karam — SmartFlow Finance** — monthly management accounts + commentary  
+   https://smartflowfinance.com/  
+   Email: karam@smartflowfinance.com
 
-## D. Cadence
+8. **Stuart Wilson — BlackpeakCFO** — publishes full sample monthly management pack  
+   https://blackpeakcfo.com/samples/monthly-management-accounts-demo/  
+   Email: stuart@blackpeakcfo.com
 
-Max ~5 cold emails/day while warming. Social: engage 5×/day before DMs. Max 2 DMs/day after engagement.
+9. **Dil Faraz** — LinkedIn critique of raw QBO exports + 6-page pack sample  
+   https://www.linkedin.com/posts/ca-dilfaraz_monthly-management-report-brightline-digital-activity-7454080583984422913-OHlC
 
-## E. Google Ads $500
+10. **David Ayomidotun — LedgerLearn** — “what does a management accounts pack look like?”  
+    https://www.linkedin.com/in/david-ayomidotun-79128127
 
-Ad credit, not cash. Do not spend on waitlist-only traffic yet. Use after sample product + conversion path exist. Note offer expiry.
+11. **Accountability Edinburgh (Rosie Berridge)** — board management accounts  
+    hello@accountabilityedinburgh.co.uk  
+    https://www.accountabilityedinburgh.co.uk/
+
+12. **FinQube Accounting** — white-label monthly packs for practices  
+    sambhav@finqubeaccounting.com  
+    https://finqubeaccounting.com/services/management-accounts
+
+13. **Victor Fernandez — QuantalAI** — competitor-adjacent Xero narrative packs (engage builder-to-builder only)  
+    https://quantal.ai/
+
+14. **Cindy Schroeder — Bookkeeping Buds** — community of women-owned firms  
+    buds@bookkeepingbuds.com  
+    https://bookkeepingbuds.com/Join
+
+15. **Ben Robinson — Bookkeepers.com** — funnel of new virtual bookkeepers  
+    https://bookkeepers.com/
+
+16. **Keli Bourner — KB Virtual Bookkeeping** — month-end reporting packs  
+    https://www.linkedin.com/in/keli-bourner-aatqb-10187911b
+
+17. **Bookist** — monthly close + “simple summary of what changed”  
+    https://bookist.com/bookkeeping
+
+18. **Zach Pasquariello** — month-end close YouTube/X  
+    https://x.com/zachpasq
+
+19. **The Bookkeepers’ Podcast (Jo & Zoe)** — distribution channel  
+    https://www.6figurebookkeeper.com/about/
+
+20. **r/Bookkeeping “What reports do you send?”** — lurk only for language  
+    https://www.reddit.com/r/Bookkeeping/comments/1klmgwu/what_reports_do_you_send_to_clients/
+
+## Communities (promo rules)
+
+| Community | Join | Promo? |
+|---|---|---|
+| 6 Figure Bookkeepers’ Club | https://www.facebook.com/groups/6figurebookkeeper | **No** |
+| Finnly Slack | https://finnly.ai/ | **No** spam |
+| Off the Ledger | https://www.paylocity.com/products/finance/off-the-ledger/ | **No-sales** |
+| Bookkeeping Buds | https://bookkeepingbuds.com/Join | Assume restricted |
+| Consortia Accounting Community | https://accounting.community/?autojoin=1 | Check rules |
+
+## This week actions
+1. Send the 3 Gmail cards already in chat.
+2. LinkedIn: comment on Samantha Baker + Dil Faraz + David Ayomidotun posts (no pitch).
+3. Email only published addresses: Donna Lynch, Karam/SmartFlow, Stuart/Blackpeak (research ask, same tone as wave 1).
+4. Join Bookkeeping Buds / Consortia as peer — no pitch week 1.
+5. Hold Google Ads spend; waitlist-only traffic burns credit.
