@@ -3,7 +3,7 @@
 Demo client pack showing how ClosePack turns a simplified QBO-style P&L CSV into a branded monthly PDF for indie bookkeepers.
 
 **Brand:** navy `#0B1F3A` + teal `#0D9488` · Firm placeholder: *Ledger & Co Bookkeeping*  
-**Insight:** bookkeepers want *their* commentary, not canned AI — draft bullets are labeled editable.
+**Insight:** bookkeepers want *their* commentary, not canned AI — draft bullets are labeled editable. ClosePack is an assembly aid; the bookkeeper owns the narrative.
 
 ## Files
 
@@ -12,27 +12,30 @@ Demo client pack showing how ClosePack turns a simplified QBO-style P&L CSV into
 | `harbor-bike-co-pl-aug-2026.csv` | Aug 2026 P&L with Jul columns (primary input) |
 | `harbor-bike-co-pl-jul-2026.csv` | Standalone July export (MoM fallback) |
 | `build_pack.py` | CSV → PDF builder (reportlab) |
-| `Harbor-Bike-Co-ClosePack-Aug-2026.pdf` | Generated pack |
+| `Harbor-Bike-Co-ClosePack-Aug-2026.pdf` | Generated pack (also linked from the waitlist) |
+
+Live waitlist PDF: https://pkdoddamani.github.io/closepack/sample-pack/Harbor-Bike-Co-ClosePack-Aug-2026.pdf
 
 ## Regenerate
 
-From this directory, using the repo venv (reportlab already installed):
+Requires Python 3.10+ and reportlab:
 
 ```bash
-cd /workspace/closepack/sample-pack
-../.venv/bin/python build_pack.py
+pip install reportlab
+cd sample-pack
+python build_pack.py
 ```
 
-Or with explicit paths:
+Defaults read `harbor-bike-co-pl-aug-2026.csv` (with Jul column) and write `Harbor-Bike-Co-ClosePack-Aug-2026.pdf`. Explicit paths:
 
 ```bash
-../.venv/bin/python build_pack.py \
+python build_pack.py \
   --csv harbor-bike-co-pl-aug-2026.csv \
   --prior-csv harbor-bike-co-pl-jul-2026.csv \
   --out Harbor-Bike-Co-ClosePack-Aug-2026.pdf
 ```
 
-Requires: Python 3.10+ and `reportlab` (`pip install reportlab`).
+`--prior-csv` is used when the primary CSV lacks a prior-month column.
 
 ## Pack sections
 
