@@ -3,8 +3,19 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ClosePack — Monthly client packs for bookkeepers</title>
-  <meta name="description" content="Turn QuickBooks or Xero exports into branded monthly client PDFs with clear KPIs and plain-English commentary. Built for independent bookkeepers." />
+  <title>ClosePack — Branded monthly client packs for bookkeepers</title>
+  <meta name="description" content="Assemble branded monthly client PDFs from QuickBooks or Xero exports — KPIs and plain-English commentary you edit and own. A pack assembly aid for independent bookkeepers, not a replacement for your narrative." />
+  <link rel="canonical" href="https://closepack.dev/" />
+  <meta property="og:title" content="ClosePack — Branded monthly client packs for bookkeepers" />
+  <meta property="og:description" content="Assemble branded monthly client PDFs from QuickBooks or Xero exports — KPIs and plain-English commentary you edit and own." />
+  <meta property="og:url" content="https://closepack.dev/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://closepack.dev/og-preview.png" />
+  <meta property="og:site_name" content="ClosePack" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="ClosePack — Branded monthly client packs for bookkeepers" />
+  <meta name="twitter:description" content="Assemble branded monthly client PDFs from QuickBooks or Xero exports — KPIs and plain-English commentary you edit and own." />
+  <meta name="twitter:image" content="https://closepack.dev/og-preview.png" />
   <link rel="icon" href="logo.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="logo.svg" />
   <style>
@@ -113,6 +124,7 @@
       padding: 1.25rem;
       display: grid;
       gap: 0.75rem;
+      max-width: 420px;
     }
     label { font-size: 0.85rem; color: var(--muted); }
     input, select {
@@ -246,6 +258,7 @@
         </div>
         <button class="btn" type="submit" id="waitlist-submit">Request early access</button>
         <p class="note" id="form-status">No spam. We only email about the pilot.</p>
+        <p class="note">Privacy: waitlist captures your email only. Client CSVs stay with the bookkeeper — we do not store client financial data yet.</p>
       </form>
     </section>
     <footer>
