@@ -159,16 +159,16 @@
       <img src="logo.svg" width="48" height="48" alt="ClosePack logo" />
       <div class="brand-name">Close<span>Pack</span></div>
     </header>
-    <div class="badge">Private beta · for bookkeepers</div>
+    <div class="badge">Founding pilot · $79/mo · 10 spots</div>
     <h1>Month-end client packs in minutes, not hours.</h1>
     <p class="lede">
       ClosePack turns a QuickBooks or Xero export into a branded PDF your clients will actually read —
       KPIs, trends, and plain-English commentary — without assembling another spreadsheet deck.
     </p>
     <div class="cta-row">
-      <a class="btn" href="#waitlist">Join the waitlist</a>
+      <a class="btn" href="#waitlist">Request a founding spot</a>
       <a class="btn btn-secondary" href="sample-pack/Harbor-Bike-Co-ClosePack-Aug-2026.pdf" target="_blank" rel="noopener">See a sample pack</a>
-      <span class="ghost">Founding price locked at $79/mo for early users</span>
+      <span class="ghost">Founding pilot: $79/mo for up to 25 packs · 10 spots</span>
     </div>
     <div class="grid">
       <div class="card">
@@ -202,13 +202,16 @@
         <li>Anyone paying per-company reporting tools that get expensive as the client list grows</li>
       </ul>
       <p class="compare" style="margin-top:1rem">
-        Fathom Starter is about <strong>A$59 per company / month</strong> at the entry tier.
-        ClosePack is a flat <strong>$79/mo</strong> for up to 25 packs — built for the recurring narrative job, not deep BI.
+        <a href="https://www.fathomhq.com/pricing" target="_blank" rel="noopener">Fathom Pro</a>
+        (branded client reports + AI commentary) is about <strong>US$450/mo for 25 companies</strong>
+        as of Sept 2026. ClosePack is a flat <strong>US$79/mo</strong> for up to 25 packs —
+        finished client-ready packs with <em>bookkeeper-owned</em> commentary, not a full BI suite.
+        Fathom Portfolio (~US$67/mo for 100 companies) is portfolio oversight without client-ready branded packs — complementary, not our peer.
       </p>
     </section>
     <section class="price">
       <div class="card">
-        <h3>Founding plan</h3>
+        <h3>Founding pilot</h3>
         <p class="amount">$79 <span>/ month</span></p>
         <ul>
           <li>Up to 25 client packs / month</li>
@@ -227,9 +230,9 @@
       </div>
     </section>
     <section id="waitlist">
-      <h2>Join the waitlist</h2>
+      <h2>Founding pilot</h2>
       <p class="lede" style="font-size:1rem;margin-bottom:1rem">
-        Tell us how you close month-end today. We are onboarding a small group of bookkeepers for paid pilots.
+        Tell us how you close month-end today. Founding pilot: $79/month, 10 spots — branded packs with commentary you edit and own.
       </p>
       <form id="waitlist-form" action="https://formspree.io/f/xnpnpvko" method="POST">
         <input type="hidden" name="_subject" value="ClosePack waitlist signup" />
@@ -256,17 +259,24 @@
             <option>Both / other</option>
           </select>
         </div>
-        <button class="btn" type="submit" id="waitlist-submit">Request early access</button>
+        <button class="btn" type="submit" id="waitlist-submit">Request a founding spot</button>
         <p class="note" id="form-status">No spam. We only email about the pilot.</p>
         <p class="note">Privacy: waitlist captures your email only. Client CSVs stay with the bookkeeper — we do not store client financial data yet.</p>
       </form>
+    </section>
+    <section>
+      <h2>Who’s building this</h2>
+      <p class="lede" style="font-size:1rem;margin:0">
+        Built by <strong>Praveen Doddamani</strong> for independent bookkeepers — assembly and branding aid so you keep the narrative, not another AI that replaces your voice.
+        Reach us at <a href="mailto:hello@closepack.dev" style="color:var(--accent)">hello@closepack.dev</a>.
+      </p>
     </section>
     <footer>
       <div class="footer-brand">
         <img src="logo.svg" width="28" height="28" alt="" />
         <strong>ClosePack</strong>
       </div>
-      An experiment building real software for bookkeepers. Not affiliated with Intuit, QuickBooks, or Xero.
+      Built by Praveen Doddamani for independent bookkeepers. Not affiliated with Intuit, QuickBooks, or Xero.
     </footer>
   </div>
   <script>
@@ -285,7 +295,7 @@
           headers: { Accept: "application/json" }
         }).then(function (res) {
           if (res.ok) {
-            status.textContent = "You're on the list. Check your inbox if Formspree asks you to confirm.";
+            status.textContent = "Thanks — you\'re on the founding pilot list. We\'ll email you when a spot opens.";
             form.reset();
           } else {
             return res.json().then(function (err) {

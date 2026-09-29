@@ -4,8 +4,9 @@
 Monthly branded client packs for independent bookkeepers: upload a QuickBooks/Xero export, get a client-ready PDF with KPIs + plain-English commentary in minutes.
 
 ## Who already pays
-- Accounting firms and bookkeepers already buy **Fathom** for branded financial reporting.
-  - Fathom Starter: **A$59/mo for 1 company**, then A$59 per extra company; Silver 10 companies A$315/mo ([Fathom pricing](https://www.fathomhq.com/pricing)).
+- Accounting firms and bookkeepers already buy **Fathom** for financial reporting / insights.
+  - **Fathom Pro** (as of Sept 2026): **US$450/mo for 25 companies** — branded management reports, Commentary Writer (AI), custom KPIs ([Fathom pricing](https://www.fathomhq.com/pricing)).
+  - **Fathom Portfolio**: ~**US$67/mo for 100 companies** — portfolio oversight and summary reports; **no** client-ready branded packs (not our peer).
 - Firms also pay with **staff time**: ~45–90 minutes per client for a basic monthly pack; complex packs 2–5 hours ([Enterprise DNA](https://enterprisedna.co/resources/blog/accounting-roi-automated-client-reporting/), [US Tech Automations](https://ustechautomations.com/resources/blog/automated-financial-reporting-case-study-2026-reissued)).
 
 ## How they buy
@@ -14,7 +15,7 @@ Monthly branded client packs for independent bookkeepers: upload a QuickBooks/Xe
 - Trial → monthly card; low contract friction (Fathom is month-to-month).
 
 ## What is broken
-- Per-company pricing punishes bookkeepers with 15–40 small clients (Fathom Starter math gets expensive fast).
+- Full Fathom Pro pricing (US$450/mo for 25 cos) is steep when the recurring job is a branded narrative pack, not forecasting/consolidations; Portfolio is cheaper oversight without client-ready packs.
 - Many solos still assemble packs in Excel/Word every month-end.
 - Incumbents optimize for deep analysis/forecasting; the recurring job for many bookkeepers is a **clear, branded narrative the client will actually read**.
 
@@ -33,4 +34,4 @@ Monthly branded client packs for independent bookkeepers: upload a QuickBooks/Xe
 - Newsletter sponsor CRM (Sponsy/SponsorKit already at ~$29).
 
 ## First test
-Landing + waitlist → 20 bookkeeper conversations → paid pilot ($79/mo or $49 founding).
+Landing + founding pilot ($79/mo, 10 spots) → 20 bookkeeper conversations → paid pilots. Soft outbound already live; learn from replies.
