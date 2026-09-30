@@ -2,8 +2,9 @@
 """
 ClosePack sample builder — CSV → branded monthly client PDF.
 
-Reads a simplified QBO-style P&L CSV (Account, current month, prior month)
-and writes a navy/teal branded ClosePack PDF for indie bookkeepers.
+Assembles a bookkeeper-branded pack (Ledger & Co) from a simplified
+QBO-style P&L CSV. ClosePack is the assembly aid; the bookkeeper owns
+branding and commentary. ClosePack appears only in the PDF footer.
 """
 
 from __future__ import annotations
@@ -14,12 +15,17 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from reportlab.graphics.charts.barcharts import VerticalBarChart
+from reportlab.graphics.charts.legends import Legend
+from reportlab.graphics.shapes import Drawing, Rect, String, Line, Group, Circle
+from reportlab.graphics.widgets.markers import makeMarker
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
 from reportlab.platypus import (
+    Flowable,
     HRFlowable,
     KeepTogether,
     Paragraph,
@@ -29,10 +35,11 @@ from reportlab.platypus import (
     TableStyle,
 )
 
-# Brand
+# Brand palette
 NAVY = colors.HexColor("#0B1F3A")
 TEAL = colors.HexColor("#0D9488")
 TEAL_LIGHT = colors.HexColor("#CCFBF1")
+TEAL_MID = colors.HexColor("#5EEAD4")
 SLATE = colors.HexColor("#334155")
 MUTED = colors.HexColor("#64748B")
 ROW_ALT = colors.HexColor("#F8FAFC")
@@ -40,11 +47,34 @@ BORDER = colors.HexColor("#E2E8F0")
 WHITE = colors.white
 GREEN = colors.HexColor("#059669")
 RED = colors.HexColor("#DC2626")
+AMBER = colors.HexColor("#D97706")
+LIGHT_RED = colors.HexColor("#FEF2F2")
+LIGHT_GREEN = colors.HexColor("#ECFDF5")
+CHART_REV = colors.HexColor("#0D9488")
+CHART_EXP = colors.HexColor("#F87171")
+CHART_NET = colors.HexColor("#0B1F3A")
 
 FIRM_NAME = "Ledger & Co Bookkeeping"
+FIRM_INITIALS = "L&C"
 CLIENT_NAME = "Harbor Bike Co"
 PERIOD_LABEL = "August 2026"
 PRIOR_LABEL = "July 2026"
+
+# ---------------------------------------------------------------------------
+# Demo synthetic 6-month history (Mar–Jun). Only Jul/Aug come from CSV.
+# Invented to trend smoothly into the real Jul/Aug totals — document clearly.
+# ---------------------------------------------------------------------------
+# Demo synthetic history (Mar–Jun 2026) — not from client books.
+# Designed to ramp into real Jul (rev 75,340 / costs 59,125 / net 16,215)
+# and Aug (rev 80,820 / costs 63,600 / net 17,220).
+SYNTHETIC_TREND = [
+    # (label, revenue, total_costs, net)
+    ("Mar", 68_400, 55_200, 13_200),
+    ("Apr", 70_100, 56_050, 14_050),
+    ("May", 72_250, 57_400, 14_850),
+    ("Jun", 73_800, 58_200, 15_600),
+    # Jul/Aug filled at runtime from CSV
+]
 
 
 @dataclass
@@ -60,7 +90,7 @@ class LineItem:
     @property
     def delta_pct(self) -> float | None:
         if self.prior == 0:
-            return None if self.current == 0 else None
+            return None
         return (self.current - self.prior) / abs(self.prior) * 100.0
 
 
@@ -72,16 +102,13 @@ def parse_money(raw: str) -> float:
 
 
 def load_pl(csv_path: Path) -> tuple[list[LineItem], dict[str, LineItem]]:
-    """Load P&L CSV with columns Account, current, prior (or merge Jul CSV)."""
     rows: list[LineItem] = []
     with csv_path.open(newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         fields = reader.fieldnames or []
-        # Prefer named month columns if present
         cur_col = next((c for c in fields if re.search(r"aug", c, re.I)), None)
         pri_col = next((c for c in fields if re.search(r"jul", c, re.I)), None)
         if not cur_col:
-            # Account, amount only — prior filled later
             amount_cols = [c for c in fields if c.lower() != "account"]
             cur_col = amount_cols[0] if amount_cols else None
             pri_col = amount_cols[1] if len(amount_cols) > 1 else None
@@ -94,18 +121,14 @@ def load_pl(csv_path: Path) -> tuple[list[LineItem], dict[str, LineItem]]:
             pri = parse_money(r.get(pri_col, "0")) if pri_col else 0.0
             rows.append(LineItem(acct, cur, pri))
 
-    by_name = {r.account: r for r in rows}
-    return rows, by_name
+    return rows, {r.account: r for r in rows}
 
 
 def merge_prior(rows: list[LineItem], prior_path: Path | None) -> list[LineItem]:
     if not prior_path or not prior_path.exists():
         return rows
-    prior_rows, prior_map = load_pl(prior_path)
-    # If prior CSV is single-column, values landed in .current
+    prior_rows, _ = load_pl(prior_path)
     if prior_rows and all(r.prior == 0 for r in prior_rows):
-        prior_map = {r.account: LineItem(r.account, 0.0, r.current) for r in prior_rows}
-        # rebuild: use prior.current as prior amount
         prior_amounts = {r.account: r.current for r in prior_rows}
     else:
         prior_amounts = {r.account: r.current for r in prior_rows}
@@ -119,8 +142,9 @@ def merge_prior(rows: list[LineItem], prior_path: Path | None) -> list[LineItem]
     return merged
 
 
-def classify(rows: list[LineItem]) -> dict[str, list[LineItem]]:
-    income, cogs, expenses, special = [], [], [], {}
+def classify(rows: list[LineItem]) -> dict:
+    income, cogs, expenses = [], [], []
+    special: dict = {}
     for r in rows:
         a = r.account
         low = a.lower()
@@ -135,7 +159,6 @@ def classify(rows: list[LineItem]) -> dict[str, list[LineItem]]:
         elif low.startswith("expenses:") or low.startswith("opex"):
             expenses.append(r)
         else:
-            # heuristic
             if "income" in low or "revenue" in low or "sales" in low:
                 income.append(r)
             elif "cogs" in low:
@@ -150,16 +173,21 @@ def money(v: float) -> str:
     return f"{sign}${abs(v):,.0f}"
 
 
-def delta_str(item: LineItem) -> str:
-    d = item.delta
-    arrow = "▲" if d > 0 else ("▼" if d < 0 else "–")
-    pct = item.delta_pct
+def money_signed(v: float) -> str:
+    if abs(v) < 0.5:
+        return "$0"
+    sign = "+" if v > 0 else "-"
+    return f"{sign}${abs(v):,.0f}"
+
+
+def pct_str(pct: float | None) -> str:
     if pct is None:
-        return f"{arrow} {money(d)}"
-    return f"{arrow} {money(d)} ({pct:+.1f}%)"
+        return "—"
+    return f"{pct:+.1f}%"
 
 
 def delta_color(delta: float, *, good_when_up: bool = True) -> colors.Color:
+    """Color semantics: revenue/profit up=green; expense/cost up=red (never green)."""
     if abs(delta) < 0.5:
         return MUTED
     up = delta > 0
@@ -169,200 +197,245 @@ def delta_color(delta: float, *, good_when_up: bool = True) -> colors.Color:
 
 def build_styles() -> dict:
     base = getSampleStyleSheet()
-    styles = {
-        "cover_brand": ParagraphStyle(
-            "cover_brand",
+    return {
+        "firm": ParagraphStyle(
+            "firm",
             parent=base["Normal"],
             fontName="Helvetica-Bold",
-            fontSize=28,
+            fontSize=18,
             textColor=WHITE,
-            alignment=TA_CENTER,
-            spaceAfter=6,
+            leading=22,
         ),
-        "cover_tag": ParagraphStyle(
-            "cover_tag",
+        "client": ParagraphStyle(
+            "client",
+            parent=base["Normal"],
+            fontName="Helvetica-Bold",
+            fontSize=13,
+            textColor=WHITE,
+            leading=16,
+        ),
+        "period": ParagraphStyle(
+            "period",
             parent=base["Normal"],
             fontName="Helvetica",
             fontSize=11,
-            textColor=TEAL_LIGHT,
-            alignment=TA_CENTER,
-            spaceAfter=24,
-        ),
-        "cover_client": ParagraphStyle(
-            "cover_client",
-            parent=base["Normal"],
-            fontName="Helvetica-Bold",
-            fontSize=22,
-            textColor=WHITE,
-            alignment=TA_CENTER,
-            spaceAfter=4,
-        ),
-        "cover_period": ParagraphStyle(
-            "cover_period",
-            parent=base["Normal"],
-            fontName="Helvetica",
-            fontSize=14,
-            textColor=colors.HexColor("#94A3B8"),
-            alignment=TA_CENTER,
-            spaceAfter=36,
-        ),
-        "cover_firm": ParagraphStyle(
-            "cover_firm",
-            parent=base["Normal"],
-            fontName="Helvetica",
-            fontSize=12,
-            textColor=TEAL,
-            alignment=TA_CENTER,
+            textColor=TEAL_MID,
+            leading=14,
         ),
         "h1": ParagraphStyle(
             "h1",
             parent=base["Normal"],
             fontName="Helvetica-Bold",
-            fontSize=16,
+            fontSize=12,
             textColor=NAVY,
-            spaceBefore=14,
-            spaceAfter=8,
+            spaceBefore=8,
+            spaceAfter=4,
+            leading=15,
         ),
         "h2": ParagraphStyle(
             "h2",
             parent=base["Normal"],
             fontName="Helvetica-Bold",
-            fontSize=12,
+            fontSize=10,
             textColor=NAVY,
-            spaceBefore=10,
-            spaceAfter=6,
+            spaceBefore=4,
+            spaceAfter=3,
+            leading=12,
         ),
         "body": ParagraphStyle(
             "body",
             parent=base["Normal"],
             fontName="Helvetica",
-            fontSize=10,
+            fontSize=9,
             textColor=SLATE,
-            leading=14,
-            spaceAfter=4,
+            leading=12,
+            spaceAfter=3,
         ),
-        "draft_label": ParagraphStyle(
-            "draft_label",
+        "caption": ParagraphStyle(
+            "caption",
             parent=base["Normal"],
             fontName="Helvetica-Oblique",
-            fontSize=8,
-            textColor=TEAL,
-            spaceAfter=6,
+            fontSize=7.5,
+            textColor=MUTED,
+            spaceAfter=4,
+            leading=10,
         ),
         "bullet": ParagraphStyle(
             "bullet",
             parent=base["Normal"],
             fontName="Helvetica",
-            fontSize=10,
+            fontSize=9,
             textColor=SLATE,
-            leading=14,
-            leftIndent=12,
-            spaceAfter=5,
+            leading=12,
+            leftIndent=10,
+            spaceAfter=3,
         ),
         "question": ParagraphStyle(
             "question",
             parent=base["Normal"],
             fontName="Helvetica",
-            fontSize=10,
+            fontSize=9,
             textColor=SLATE,
-            leading=14,
-            leftIndent=14,
-            spaceAfter=6,
+            leading=12,
+            leftIndent=4,
+            spaceAfter=3,
         ),
         "disclaimer": ParagraphStyle(
             "disclaimer",
             parent=base["Normal"],
             fontName="Helvetica",
-            fontSize=8,
+            fontSize=7,
             textColor=MUTED,
-            leading=11,
-            alignment=TA_LEFT,
-        ),
-        "footer": ParagraphStyle(
-            "footer",
-            parent=base["Normal"],
-            fontName="Helvetica",
-            fontSize=8,
-            textColor=MUTED,
-            alignment=TA_CENTER,
+            leading=9,
         ),
         "kpi_label": ParagraphStyle(
             "kpi_label",
             parent=base["Normal"],
             fontName="Helvetica",
-            fontSize=8,
+            fontSize=7.5,
             textColor=MUTED,
             alignment=TA_CENTER,
+            leading=9,
         ),
         "kpi_value": ParagraphStyle(
             "kpi_value",
             parent=base["Normal"],
             fontName="Helvetica-Bold",
-            fontSize=16,
+            fontSize=14,
             textColor=NAVY,
             alignment=TA_CENTER,
-        ),
-        "kpi_delta": ParagraphStyle(
-            "kpi_delta",
-            parent=base["Normal"],
-            fontName="Helvetica",
-            fontSize=8,
-            alignment=TA_CENTER,
+            leading=17,
         ),
         "cell": ParagraphStyle(
             "cell",
             parent=base["Normal"],
             fontName="Helvetica",
-            fontSize=9,
+            fontSize=8,
             textColor=SLATE,
-            leading=11,
+            leading=10,
         ),
         "cell_bold": ParagraphStyle(
             "cell_bold",
             parent=base["Normal"],
             fontName="Helvetica-Bold",
-            fontSize=9,
+            fontSize=8,
             textColor=NAVY,
-            leading=11,
+            leading=10,
         ),
         "cell_right": ParagraphStyle(
             "cell_right",
             parent=base["Normal"],
             fontName="Helvetica",
-            fontSize=9,
+            fontSize=8,
             textColor=SLATE,
             alignment=TA_RIGHT,
-            leading=11,
+            leading=10,
         ),
         "th": ParagraphStyle(
             "th",
             parent=base["Normal"],
             fontName="Helvetica-Bold",
-            fontSize=8,
+            fontSize=7.5,
             textColor=WHITE,
             alignment=TA_LEFT,
+            leading=9,
         ),
         "th_right": ParagraphStyle(
             "th_right",
             parent=base["Normal"],
             fontName="Helvetica-Bold",
-            fontSize=8,
+            fontSize=7.5,
             textColor=WHITE,
             alignment=TA_RIGHT,
+            leading=9,
         ),
     }
-    return styles
+
+
+class LogoMark(Flowable):
+    """Simple initials block for Ledger & Co."""
+
+    def __init__(self, size: float = 36):
+        super().__init__()
+        self.size = size
+        self.width = size
+        self.height = size
+
+    def draw(self):
+        c = self.canv
+        s = self.size
+        c.setFillColor(TEAL)
+        c.roundRect(0, 0, s, s, 5, fill=1, stroke=0)
+        c.setFillColor(WHITE)
+        c.setFont("Helvetica-Bold", s * 0.32)
+        text = FIRM_INITIALS
+        tw = c.stringWidth(text, "Helvetica-Bold", s * 0.32)
+        c.drawString((s - tw) / 2, s * 0.36, text)
 
 
 def section_rule():
-    return HRFlowable(width="100%", thickness=1.5, color=TEAL, spaceBefore=2, spaceAfter=8)
+    return HRFlowable(width="100%", thickness=1.2, color=TEAL, spaceBefore=0, spaceAfter=5)
+
+
+def make_header(styles: dict, content_w: float) -> list:
+    """Bookkeeper branding as the BIG header — ClosePack is NOT here."""
+    logo = LogoMark(40)
+    text_block = Table(
+        [
+            [Paragraph(FIRM_NAME, styles["firm"])],
+            [Paragraph(f"{CLIENT_NAME}  ·  Monthly close pack", styles["client"])],
+            [Paragraph(PERIOD_LABEL, styles["period"])],
+        ],
+        colWidths=[content_w - 56],
+    )
+    text_block.setStyle(
+        TableStyle(
+            [
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("TOPPADDING", (0, 0), (-1, -1), 1),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+            ]
+        )
+    )
+    inner = Table([[logo, text_block]], colWidths=[48, content_w - 56])
+    inner.setStyle(
+        TableStyle(
+            [
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("LEFTPADDING", (0, 0), (0, 0), 10),
+                ("RIGHTPADDING", (0, 0), (0, 0), 8),
+                ("LEFTPADDING", (1, 0), (1, 0), 4),
+                ("TOPPADDING", (0, 0), (-1, -1), 10),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+            ]
+        )
+    )
+    wrap = Table([[inner]], colWidths=[content_w])
+    wrap.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), NAVY),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+            ]
+        )
+    )
+    accent = Table([[""]], colWidths=[content_w], rowHeights=[4])
+    accent.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), TEAL)]))
+    return [wrap, accent, Spacer(1, 8)]
 
 
 def kpi_card(label: str, value: str, delta_text: str, dcolor: colors.Color, styles: dict, width: float):
     delta_style = ParagraphStyle(
         f"kpi_d_{label}",
-        parent=styles["kpi_delta"],
+        parent=styles["kpi_label"],
         textColor=dcolor,
+        fontName="Helvetica-Bold",
+        fontSize=8,
     )
     data = [
         [Paragraph(label.upper(), styles["kpi_label"])],
@@ -374,13 +447,13 @@ def kpi_card(label: str, value: str, delta_text: str, dcolor: colors.Color, styl
         TableStyle(
             [
                 ("BACKGROUND", (0, 0), (-1, -1), ROW_ALT),
-                ("BOX", (0, 0), (-1, -1), 1, BORDER),
-                ("TOPPADDING", (0, 0), (-1, 0), 10),
-                ("BOTTOMPADDING", (0, -1), (-1, -1), 10),
-                ("TOPPADDING", (0, 1), (-1, 1), 4),
-                ("BOTTOMPADDING", (0, 1), (-1, 1), 2),
-                ("LEFTPADDING", (0, 0), (-1, -1), 8),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                ("BOX", (0, 0), (-1, -1), 0.8, BORDER),
+                ("TOPPADDING", (0, 0), (-1, 0), 6),
+                ("BOTTOMPADDING", (0, -1), (-1, -1), 6),
+                ("TOPPADDING", (0, 1), (-1, 1), 2),
+                ("BOTTOMPADDING", (0, 1), (-1, 1), 1),
+                ("LEFTPADDING", (0, 0), (-1, -1), 4),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 4),
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
                 ("ALIGN", (0, 0), (-1, -1), "CENTER"),
             ]
@@ -389,172 +462,398 @@ def kpi_card(label: str, value: str, delta_text: str, dcolor: colors.Color, styl
     return t
 
 
-def detail_table(title: str, items: list[LineItem], styles: dict, *, good_when_up: bool, content_width: float):
-    header = [
-        Paragraph("Account", styles["th"]),
-        Paragraph(PERIOD_LABEL, styles["th_right"]),
-        Paragraph(PRIOR_LABEL, styles["th_right"]),
-        Paragraph("Change", styles["th_right"]),
-    ]
+def detail_table(
+    title: str,
+    items: list[LineItem],
+    styles: dict,
+    *,
+    good_when_up: bool,
+    content_width: float,
+    show_pct: bool = True,
+):
+    """Full detail: Account | Current | Prior | $ Change | % Change."""
+    if show_pct:
+        header = [
+            Paragraph("Account", styles["th"]),
+            Paragraph(PERIOD_LABEL.split()[0][:3], styles["th_right"]),  # Aug
+            Paragraph(PRIOR_LABEL.split()[0][:3], styles["th_right"]),  # Jul
+            Paragraph("$ Change", styles["th_right"]),
+            Paragraph("% Chg", styles["th_right"]),
+        ]
+    else:
+        header = [
+            Paragraph("Account", styles["th"]),
+            Paragraph(PERIOD_LABEL, styles["th_right"]),
+            Paragraph(PRIOR_LABEL, styles["th_right"]),
+            Paragraph("Change", styles["th_right"]),
+        ]
     data = [header]
     total_cur = total_pri = 0.0
     for it in items:
         total_cur += it.current
         total_pri += it.prior
         dcol = delta_color(it.delta, good_when_up=good_when_up)
-        dstyle = ParagraphStyle("_d", parent=styles["cell_right"], textColor=dcol)
+        dstyle = ParagraphStyle("_d", parent=styles["cell_right"], textColor=dcol, fontName="Helvetica-Bold")
         name = it.account.split(":", 1)[-1].strip() if ":" in it.account else it.account
-        data.append(
-            [
-                Paragraph(name, styles["cell"]),
-                Paragraph(money(it.current), styles["cell_right"]),
-                Paragraph(money(it.prior), styles["cell_right"]),
-                Paragraph(delta_str(it), dstyle),
-            ]
-        )
+        if show_pct:
+            data.append(
+                [
+                    Paragraph(name, styles["cell"]),
+                    Paragraph(money(it.current), styles["cell_right"]),
+                    Paragraph(money(it.prior), styles["cell_right"]),
+                    Paragraph(money_signed(it.delta), dstyle),
+                    Paragraph(pct_str(it.delta_pct), dstyle),
+                ]
+            )
+        else:
+            data.append(
+                [
+                    Paragraph(name, styles["cell"]),
+                    Paragraph(money(it.current), styles["cell_right"]),
+                    Paragraph(money(it.prior), styles["cell_right"]),
+                    Paragraph(f"{money_signed(it.delta)} ({pct_str(it.delta_pct)})", dstyle),
+                ]
+            )
 
-    # totals row
     tot_delta = total_cur - total_pri
     tot_pct = (tot_delta / abs(total_pri) * 100.0) if total_pri else 0.0
-    arrow = "▲" if tot_delta > 0 else ("▼" if tot_delta < 0 else "–")
     dcol = delta_color(tot_delta, good_when_up=good_when_up)
     dstyle = ParagraphStyle("_td", parent=styles["cell_right"], textColor=dcol, fontName="Helvetica-Bold")
-    data.append(
-        [
-            Paragraph("Total", styles["cell_bold"]),
-            Paragraph(money(total_cur), ParagraphStyle("_tr", parent=styles["cell_right"], fontName="Helvetica-Bold", textColor=NAVY)),
-            Paragraph(money(total_pri), ParagraphStyle("_tr2", parent=styles["cell_right"], fontName="Helvetica-Bold", textColor=NAVY)),
-            Paragraph(f"{arrow} {money(tot_delta)} ({tot_pct:+.1f}%)", dstyle),
+    bold_r = ParagraphStyle("_tr", parent=styles["cell_right"], fontName="Helvetica-Bold", textColor=NAVY)
+    if show_pct:
+        data.append(
+            [
+                Paragraph("Total", styles["cell_bold"]),
+                Paragraph(money(total_cur), bold_r),
+                Paragraph(money(total_pri), bold_r),
+                Paragraph(money_signed(tot_delta), dstyle),
+                Paragraph(f"{tot_pct:+.1f}%", dstyle),
+            ]
+        )
+        col_w = [
+            content_width * 0.34,
+            content_width * 0.16,
+            content_width * 0.16,
+            content_width * 0.18,
+            content_width * 0.16,
         ]
-    )
+    else:
+        data.append(
+            [
+                Paragraph("Total", styles["cell_bold"]),
+                Paragraph(money(total_cur), bold_r),
+                Paragraph(money(total_pri), bold_r),
+                Paragraph(f"{money_signed(tot_delta)} ({tot_pct:+.1f}%)", dstyle),
+            ]
+        )
+        col_w = [content_width * 0.40, content_width * 0.20, content_width * 0.20, content_width * 0.20]
 
-    col_w = [content_width * 0.40, content_width * 0.20, content_width * 0.20, content_width * 0.20]
     t = Table(data, colWidths=col_w, repeatRows=1)
     style_cmds = [
         ("BACKGROUND", (0, 0), (-1, 0), NAVY),
         ("BACKGROUND", (0, -1), (-1, -1), TEAL_LIGHT),
-        ("LINEBELOW", (0, 0), (-1, 0), 0, NAVY),
         ("LINEABOVE", (0, -1), (-1, -1), 1, TEAL),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("TOPPADDING", (0, 0), (-1, -1), 6),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-        ("LEFTPADDING", (0, 0), (-1, -1), 8),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-        ("BOX", (0, 0), (-1, -1), 1, BORDER),
+        ("TOPPADDING", (0, 0), (-1, -1), 3.5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 3.5),
+        ("LEFTPADDING", (0, 0), (-1, -1), 5),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+        ("BOX", (0, 0), (-1, -1), 0.8, BORDER),
     ]
     for i in range(1, len(data) - 1):
         if i % 2 == 0:
             style_cmds.append(("BACKGROUND", (0, i), (-1, i), ROW_ALT))
-        style_cmds.append(("LINEBELOW", (0, i), (-1, i), 0.5, BORDER))
+        style_cmds.append(("LINEBELOW", (0, i), (-1, i), 0.4, BORDER))
     t.setStyle(TableStyle(style_cmds))
-    return [Paragraph(title, styles["h2"]), t, Spacer(1, 8)]
+    return [Paragraph(title, styles["h2"]), t, Spacer(1, 4)]
 
 
-def draft_commentary(parts: dict) -> list[str]:
-    """Assemble editable-style draft bullets from MoM swings (bookkeeper owns final copy)."""
+def trend_drawing(rev_aug: float, cost_aug: float, net_aug: float,
+                  rev_jul: float, cost_jul: float, net_jul: float,
+                  width: float, height: float = 155) -> Drawing:
+    """Grouped bar chart: Revenue / Total costs / Net for Mar–Aug 2026.
+
+    Mar–Jun are demo synthetic history (see SYNTHETIC_TREND); Jul–Aug from CSV.
+    """
+    months = []
+    rev, costs, nets = [], [], []
+    for label, r, c, n in SYNTHETIC_TREND:
+        months.append(label)
+        rev.append(r / 1000.0)  # show in $k
+        costs.append(c / 1000.0)
+        nets.append(n / 1000.0)
+    months.extend(["Jul", "Aug"])
+    rev.extend([rev_jul / 1000.0, rev_aug / 1000.0])
+    costs.extend([cost_jul / 1000.0, cost_aug / 1000.0])
+    nets.extend([net_jul / 1000.0, net_aug / 1000.0])
+
+    d = Drawing(width, height)
+    chart = VerticalBarChart()
+    chart.x = 40
+    chart.y = 28
+    chart.height = height - 55
+    chart.width = width - 50
+    chart.data = [rev, costs, nets]
+    chart.categoryAxis.categoryNames = months
+    chart.categoryAxis.labels.fontName = "Helvetica"
+    chart.categoryAxis.labels.fontSize = 7
+    chart.categoryAxis.labels.fillColor = MUTED
+    chart.valueAxis.valueMin = 0
+    chart.valueAxis.valueMax = 90
+    chart.valueAxis.valueStep = 15
+    chart.valueAxis.labels.fontName = "Helvetica"
+    chart.valueAxis.labels.fontSize = 7
+    chart.valueAxis.labels.fillColor = MUTED
+    chart.valueAxis.labels.boxAnchor = "e"
+    chart.groupSpacing = 8
+    chart.barSpacing = 1
+    chart.bars[0].fillColor = CHART_REV
+    chart.bars[1].fillColor = CHART_EXP
+    chart.bars[2].fillColor = CHART_NET
+    chart.bars[0].strokeColor = None
+    chart.bars[1].strokeColor = None
+    chart.bars[2].strokeColor = None
+    chart.categoryAxis.strokeColor = BORDER
+    chart.valueAxis.strokeColor = BORDER
+    chart.valueAxis.gridStrokeColor = colors.HexColor("#F1F5F9")
+    chart.valueAxis.gridStrokeWidth = 0.5
+    d.add(chart)
+
+    # Legend
+    legend = Legend()
+    legend.alignment = "right"
+    legend.x = 50
+    legend.y = height - 14
+    legend.dx = 8
+    legend.dy = 8
+    legend.fontName = "Helvetica"
+    legend.fontSize = 7
+    legend.fillColor = SLATE
+    legend.strokeColor = None
+    legend.columnMaximum = 1
+    legend.boxAnchor = "w"
+    legend.deltax = 90
+    legend.colorNamePairs = [
+        (CHART_REV, "Revenue ($k)"),
+        (CHART_EXP, "Total costs ($k)"),
+        (CHART_NET, "Net profit ($k)"),
+    ]
+    d.add(legend)
+
+    # Axis note
+    d.add(String(40, 8, "$ thousands  ·  Mar–Jun demo synthetic history; Jul–Aug from P&L",
+                 fontName="Helvetica-Oblique", fontSize=6.5, fillColor=MUTED))
+    return d
+
+
+def build_commentary(parts: dict, totals: dict) -> list[str]:
+    """Commentary that reconciles FULL MoM moves from the CSV arithmetic.
+
+    Revenue Δ = +5,480 must be explained by income-line moves.
+    Total costs Δ = +4,475 = COGS +2,630 + OpEx +1,845 must be explained
+    (COGS bikes biggest, then marketing, tools, payroll — not leave ~3.2k unexplained).
+    """
     income = parts["income"]
-    expenses = parts["expenses"]
     cogs = parts["cogs"]
+    expenses = parts["expenses"]
     special = parts["special"]
+
+    by = {i.account.split(":")[-1].strip().lower(): i for i in income}
+    cogs_by = {c.account.split(":")[-1].strip().lower(): c for c in cogs}
+    exp_by = {e.account.split(":")[-1].strip().lower(): e for e in expenses}
+
+    def find(mapping, *keys):
+        for k, v in mapping.items():
+            for key in keys:
+                if key in k:
+                    return v
+        return None
+
+    new = find(by, "new")
+    used = find(by, "used")
+    svc = find(by, "service")
+    parts_rev = find(by, "parts")
+    rentals = find(by, "rental")
+    bikes_cogs = find(cogs_by, "bike")
+    parts_cogs = find(cogs_by, "parts")
+    supplies = find(cogs_by, "supplies", "shop")
+    mkt = find(exp_by, "marketing")
+    tools = find(exp_by, "tool")
+    wages = find(exp_by, "wages")
+    tax = find(exp_by, "tax", "benefits")
+    fees = find(exp_by, "merchant", "card")
+    office = find(exp_by, "office")
+    util = find(exp_by, "utilit")
+
+    rev_d = totals["rev_d"]
+    cogs_d = totals["cogs_d"]
+    opex_d = totals["opex_d"]
+    cost_d = totals["cost_d"]
+    net_d = totals["net_d"]
 
     bullets: list[str] = []
 
-    # Revenue swing
-    if income:
-        top = max(income, key=lambda x: abs(x.delta))
-        name = top.account.split(":")[-1].strip()
-        if top.delta > 0:
-            bullets.append(
-                f"<b>{name}</b> rose {money(top.delta)} MoM — strong August traffic / new-bike demand. "
-                f"(Draft note: confirm if promo or seasonal.)"
-            )
-        else:
-            bullets.append(
-                f"<b>{name}</b> softened by {money(abs(top.delta))} vs July. "
-                f"(Draft note: ask client what shifted on the floor.)"
-            )
+    # Revenue reconciliation → must sum to +5480
+    rev_bits = []
+    if new:
+        rev_bits.append(f"New bikes {money_signed(new.delta)}")
+    if used:
+        rev_bits.append(f"Used {money_signed(used.delta)}")
+    if svc:
+        rev_bits.append(f"Service {money_signed(svc.delta)}")
+    if parts_rev:
+        rev_bits.append(f"Parts {money_signed(parts_rev.delta)}")
+    if rentals:
+        rev_bits.append(f"Rentals {money_signed(rentals.delta)}")
+    bullets.append(
+        f"<b>Revenue {money_signed(rev_d)}</b> MoM "
+        f"({money(totals['rev_pri'])} → {money(totals['rev_cur'])}). "
+        f"Drivers: {'; '.join(rev_bits)} "
+        f"= <b>{money_signed(rev_d)}</b>. Strong new-bike and service demand offset softer used/rentals."
+    )
 
-    # Marketing spend
-    mkt = next((e for e in expenses if "marketing" in e.account.lower()), None)
-    if mkt and mkt.delta > 200:
-        bullets.append(
-            f"<b>Marketing & Ads</b> up {money(mkt.delta)} — likely tied to late-summer campaigns. "
-            f"Worth reviewing ROAS before next month's budget."
-        )
+    # COGS — biggest cost move
+    cogs_bits = []
+    if bikes_cogs:
+        cogs_bits.append(f"Bikes {money_signed(bikes_cogs.delta)}")
+    if parts_cogs:
+        cogs_bits.append(f"Parts {money_signed(parts_cogs.delta)}")
+    if supplies:
+        cogs_bits.append(f"Shop supplies {money_signed(supplies.delta)}")
+    bullets.append(
+        f"<b>COGS {money_signed(cogs_d)}</b> "
+        f"({money(totals['cogs_pri'])} → {money(totals['cogs_cur'])}) — largest cost move. "
+        f"{'; '.join(cogs_bits)}. Bike COGS tracks the new-bike sales lift."
+    )
 
-    # Tools / one-time
-    tools = next((e for e in expenses if "tool" in e.account.lower()), None)
-    if tools and tools.delta > 200:
-        bullets.append(
-            f"<b>Tools & Equipment</b> jumped {money(tools.delta)} (one-time shop investment?). "
-            f"Flag as non-recurring so run-rate OpEx stays clear."
-        )
+    # OpEx movers that explain the remaining ~1845
+    opex_bits = []
+    if mkt:
+        opex_bits.append(f"Marketing {money_signed(mkt.delta)}")
+    if tools:
+        opex_bits.append(f"Tools {money_signed(tools.delta)}")
+    if wages:
+        opex_bits.append(f"Payroll wages {money_signed(wages.delta)}")
+    if tax:
+        opex_bits.append(f"Payroll tax {money_signed(tax.delta)}")
+    if fees:
+        opex_bits.append(f"Merchant fees {money_signed(fees.delta)}")
+    if office:
+        opex_bits.append(f"Office {money_signed(office.delta)}")
+    if util:
+        opex_bits.append(f"Utilities {money_signed(util.delta)}")
+    bullets.append(
+        f"<b>OpEx {money_signed(opex_d)}</b> "
+        f"({money(totals['opex_pri'])} → {money(totals['opex_cur'])}). "
+        f"Movers: {'; '.join(opex_bits)}. "
+        f"Rent, insurance, software, and professional fees were flat. "
+        f"Tools looks one-time; marketing stepped up for late summer."
+    )
 
-    # Service income
-    svc = next((i for i in income if "service" in i.account.lower()), None)
-    if svc and svc.delta > 0:
-        bullets.append(
-            f"<b>Service & Repair</b> +{money(svc.delta)} — healthy attachment to bike sales; "
-            f"labor utilization looks stronger than July."
-        )
+    # Total cost bridge
+    bullets.append(
+        f"<b>Total costs {money_signed(cost_d)}</b> = COGS {money_signed(cogs_d)} + OpEx {money_signed(opex_d)}. "
+        f"Against revenue {money_signed(rev_d)}, <b>net income {money_signed(net_d)}</b> "
+        f"({money(totals['net_pri'])} → {money(totals['net_cur'])})."
+    )
 
-    # Cash
     cash = special.get("cash")
     if cash:
-        direction = "improved" if cash.delta >= 0 else "dipped"
         bullets.append(
-            f"<b>Cash on hand</b> {direction} to {money(cash.current)} "
-            f"({delta_str(cash)}). Keep an eye on inventory restock timing into fall."
+            f"<b>Cash on hand</b> {money(cash.current)} ({money_signed(cash.delta)} MoM). "
+            f"Watch inventory restock timing into fall."
         )
 
-    # Net
-    net = special.get("net")
-    if net and abs(net.delta) > 50:
-        if len(bullets) >= 5:
-            bullets = bullets[:4]
-        bullets.append(
-            f"<b>Net income</b> landed at {money(net.current)} "
-            f"({delta_str(net)} vs July) — margin story is mostly mix + stepped-up marketing."
-        )
-
-    return bullets[:5]
+    return bullets
 
 
-def client_questions(parts: dict) -> list[str]:
-    qs = [
+def client_questions() -> list[str]:
+    return [
         "Any large bike orders or wholesale deals expected in September that we should accrue?",
         "Was the Tools & Equipment spend a one-time purchase, or part of an ongoing upgrade plan?",
         "Should we keep Marketing at the August level through fall peak, or pull back?",
         "Any owner draws, loan payments, or inventory deposits not yet in the books?",
         "Confirm: are used-bike consignments fully recorded, or are some still on memo?",
     ]
-    return qs
+
+
+def assert_totals(parts: dict) -> dict:
+    """Sanity-check arithmetic against the known Harbor Bike CSV totals."""
+    income, cogs, expenses = parts["income"], parts["cogs"], parts["expenses"]
+    special = parts["special"]
+
+    rev_cur = sum(i.current for i in income)
+    rev_pri = sum(i.prior for i in income)
+    cogs_cur = sum(c.current for c in cogs)
+    cogs_pri = sum(c.prior for c in cogs)
+    opex_cur = sum(e.current for e in expenses)
+    opex_pri = sum(e.prior for e in expenses)
+    cost_cur = cogs_cur + opex_cur
+    cost_pri = cogs_pri + opex_pri
+    net = special.get("net")
+    net_cur = net.current if net else rev_cur - cost_cur
+    net_pri = net.prior if net else rev_pri - cost_pri
+
+    # Spec-mandated asserts
+    assert abs(rev_cur - 80820) < 0.5, f"Aug revenue expected 80820, got {rev_cur}"
+    assert abs(rev_pri - 75340) < 0.5, f"Jul revenue expected 75340, got {rev_pri}"
+    assert abs(rev_cur - rev_pri - 5480) < 0.5, f"Rev Δ expected +5480, got {rev_cur - rev_pri}"
+    assert abs(cogs_cur - 34040) < 0.5, f"Aug COGS expected 34040, got {cogs_cur}"
+    assert abs(cogs_pri - 31410) < 0.5, f"Jul COGS expected 31410, got {cogs_pri}"
+    assert abs(cogs_cur - cogs_pri - 2630) < 0.5, f"COGS Δ expected +2630, got {cogs_cur - cogs_pri}"
+    assert abs(opex_cur - 29560) < 0.5, f"Aug OpEx expected 29560, got {opex_cur}"
+    assert abs(opex_pri - 27715) < 0.5, f"Jul OpEx expected 27715, got {opex_pri}"
+    assert abs(opex_cur - opex_pri - 1845) < 0.5, f"OpEx Δ expected +1845, got {opex_cur - opex_pri}"
+    assert abs((cogs_cur - cogs_pri) + (opex_cur - opex_pri) - 4475) < 0.5
+    assert abs(net_cur - 17220) < 0.5, f"Aug NI expected 17220, got {net_cur}"
+    assert abs(net_pri - 16215) < 0.5, f"Jul NI expected 16215, got {net_pri}"
+    assert abs(net_cur - net_pri - 1005) < 0.5, f"NI Δ expected +1005, got {net_cur - net_pri}"
+
+    # Income line reconciliation
+    income_deltas = {i.account.split(":")[-1].strip(): i.delta for i in income}
+    expected_inc = {
+        "Bike Sales - New": 4130,
+        "Bike Sales - Used": -470,
+        "Service & Repair": 1590,
+        "Parts & Accessories": 580,
+        "Rentals": -350,
+    }
+    for name, exp_d in expected_inc.items():
+        got = income_deltas.get(name)
+        assert got is not None and abs(got - exp_d) < 0.5, f"{name} Δ expected {exp_d}, got {got}"
+    assert abs(sum(expected_inc.values()) - 5480) < 0.5
+
+    return {
+        "rev_cur": rev_cur,
+        "rev_pri": rev_pri,
+        "rev_d": rev_cur - rev_pri,
+        "cogs_cur": cogs_cur,
+        "cogs_pri": cogs_pri,
+        "cogs_d": cogs_cur - cogs_pri,
+        "opex_cur": opex_cur,
+        "opex_pri": opex_pri,
+        "opex_d": opex_cur - opex_pri,
+        "cost_cur": cost_cur,
+        "cost_pri": cost_pri,
+        "cost_d": cost_cur - cost_pri,
+        "net_cur": net_cur,
+        "net_pri": net_pri,
+        "net_d": net_cur - net_pri,
+        "net": net or LineItem("Net Income", net_cur, net_pri),
+        "cash": special.get("cash"),
+    }
 
 
 def build_pdf(rows: list[LineItem], out_path: Path) -> None:
     styles = build_styles()
     parts = classify(rows)
+    totals = assert_totals(parts)
     income, cogs, expenses = parts["income"], parts["cogs"], parts["expenses"]
-    special = parts["special"]
-
-    total_rev = sum(i.current for i in income)
-    prior_rev = sum(i.prior for i in income)
-    total_cogs = sum(c.current for c in cogs)
-    prior_cogs = sum(c.prior for c in cogs)
-    total_opex = sum(e.current for e in expenses)
-    prior_opex = sum(e.prior for e in expenses)
-    total_exp = total_cogs + total_opex
-    prior_exp = prior_cogs + prior_opex
-
-    net = special.get("net") or LineItem(
-        "Net Income",
-        total_rev - total_exp,
-        prior_rev - prior_exp,
-    )
-    cash = special.get("cash")
+    net = totals["net"]
+    cash = totals["cash"]
 
     page_w, page_h = letter
-    margin = 0.7 * inch
+    margin = 0.55 * inch
     content_w = page_w - 2 * margin
 
     doc = SimpleDocTemplate(
@@ -562,64 +861,39 @@ def build_pdf(rows: list[LineItem], out_path: Path) -> None:
         pagesize=letter,
         leftMargin=margin,
         rightMargin=margin,
-        topMargin=0.6 * inch,
-        bottomMargin=0.65 * inch,
-        title=f"ClosePack — {CLIENT_NAME} — {PERIOD_LABEL}",
+        topMargin=0.45 * inch,
+        bottomMargin=0.55 * inch,
+        title=f"{CLIENT_NAME} — {PERIOD_LABEL} Monthly Pack",
         author=FIRM_NAME,
+        subject="ClosePack sample — bookkeeper-branded monthly client pack",
+        creator="ClosePack sample builder",
     )
 
-    story = []
+    story: list = []
+    story.extend(make_header(styles, content_w))
 
-    # ── Cover ───────────────────────────────────────────────────────────────
-    cover_data = [
-        [Paragraph("ClosePack", styles["cover_brand"])],
-        [Paragraph("Monthly client pack · assembled for bookkeepers", styles["cover_tag"])],
-        [Spacer(1, 18)],
-        [Paragraph(CLIENT_NAME, styles["cover_client"])],
-        [Paragraph(PERIOD_LABEL, styles["cover_period"])],
-        [Paragraph(f"Prepared by {FIRM_NAME}", styles["cover_firm"])],
-        [Paragraph("Firm logo placeholder", ParagraphStyle(
-            "logo_ph", parent=styles["cover_firm"], fontSize=8, textColor=MUTED, spaceBefore=8
-        ))],
-    ]
-    cover = Table(cover_data, colWidths=[content_w])
-    cover.setStyle(
-        TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (-1, -1), NAVY),
-                ("TOPPADDING", (0, 0), (-1, 0), 48),
-                ("BOTTOMPADDING", (0, -1), (-1, -1), 40),
-                ("LEFTPADDING", (0, 0), (-1, -1), 24),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 24),
-                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ]
-        )
-    )
-    # teal accent bar under cover
-    accent = Table([[""]], colWidths=[content_w], rowHeights=[6])
-    accent.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), TEAL)]))
-    story.append(cover)
-    story.append(accent)
-    story.append(Spacer(1, 18))
-
-    # ── Snapshot KPIs ────────────────────────────────────────────────────────
-    story.append(Paragraph("Snapshot", styles["h1"]))
+    # ── Snapshot KPIs ──────────────────────────────────────────────────────
+    story.append(Paragraph("Month-end snapshot", styles["h1"]))
     story.append(section_rule())
 
-    rev_item = LineItem("Revenue", total_rev, prior_rev)
-    exp_item = LineItem("Expenses", total_exp, prior_exp)
-    gap = 10
+    gap = 6
     card_w = (content_w - 3 * gap) / 4
+    rev_d_txt = f"{money_signed(totals['rev_d'])} ({pct_str(totals['rev_d'] / totals['rev_pri'] * 100)}) MoM"
+    cost_d_txt = f"{money_signed(totals['cost_d'])} ({pct_str(totals['cost_d'] / totals['cost_pri'] * 100)}) MoM"
+    net_d_txt = f"{money_signed(totals['net_d'])} ({pct_str(totals['net_d'] / totals['net_pri'] * 100)}) MoM"
     cards = [
-        kpi_card("Revenue", money(total_rev), delta_str(rev_item), delta_color(rev_item.delta, good_when_up=True), styles, card_w),
-        kpi_card("Expenses", money(total_exp), delta_str(exp_item), delta_color(exp_item.delta, good_when_up=False), styles, card_w),
-        kpi_card("Net profit", money(net.current), delta_str(net), delta_color(net.delta, good_when_up=True), styles, card_w),
+        kpi_card("Revenue", money(totals["rev_cur"]), rev_d_txt,
+                 delta_color(totals["rev_d"], good_when_up=True), styles, card_w),
+        kpi_card("Total costs", money(totals["cost_cur"]), cost_d_txt,
+                 delta_color(totals["cost_d"], good_when_up=False), styles, card_w),
+        kpi_card("Net profit", money(totals["net_cur"]), net_d_txt,
+                 delta_color(totals["net_d"], good_when_up=True), styles, card_w),
     ]
     if cash:
-        cards.append(
-            kpi_card("Cash", money(cash.current), delta_str(cash), delta_color(cash.delta, good_when_up=True), styles, card_w)
-        )
+        cash_pct = cash.delta_pct
+        cash_txt = f"{money_signed(cash.delta)} ({pct_str(cash_pct)}) MoM"
+        cards.append(kpi_card("Cash", money(cash.current), cash_txt,
+                              delta_color(cash.delta, good_when_up=True), styles, card_w))
     else:
         cards.append(kpi_card("Cash", "—", "not in export", MUTED, styles, card_w))
 
@@ -629,64 +903,69 @@ def build_pdf(rows: list[LineItem], out_path: Path) -> None:
     )
     kpi_row.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP")]))
     story.append(kpi_row)
-    story.append(Spacer(1, 6))
+    story.append(Spacer(1, 3))
     story.append(
         Paragraph(
-            f"MoM comparison vs {PRIOR_LABEL}. Figures assembled from client QBO/Xero-style P&amp;L export.",
-            styles["draft_label"],
+            f"Vs {PRIOR_LABEL}. COGS {money(totals['cogs_cur'])} + OpEx {money(totals['opex_cur'])} "
+            f"= total costs {money(totals['cost_cur'])}.",
+            styles["caption"],
         )
     )
 
-    # ── What changed ─────────────────────────────────────────────────────────
+    # ── 6-month trend ──────────────────────────────────────────────────────
+    story.append(Paragraph("6-month trend (Mar–Aug 2026)", styles["h1"]))
+    story.append(section_rule())
+    story.append(
+        trend_drawing(
+            totals["rev_cur"], totals["cost_cur"], totals["net_cur"],
+            totals["rev_pri"], totals["cost_pri"], totals["net_pri"],
+            content_w, height=128,
+        )
+    )
+    story.append(Spacer(1, 2))
+
+    # ── What changed ───────────────────────────────────────────────────────
     story.append(Paragraph("What changed", styles["h1"]))
     story.append(section_rule())
     story.append(
         Paragraph(
-            "✎ DRAFT COMMENTARY — editable by the bookkeeper. ClosePack drafts the assembly; "
-            "you own the narrative. Replace or rewrite before sending to the client.",
-            styles["draft_label"],
+            "Commentary is bookkeeper-owned and editable before client send. ClosePack drafts the assembly; you own the narrative.",
+            styles["caption"],
         )
     )
-    for b in draft_commentary(parts):
+    for b in build_commentary(parts, totals):
         story.append(Paragraph(f"• {b}", styles["bullet"]))
 
-    # ── Income detail ───────────────────────────────────────────────────────
-    story.append(Paragraph("Income detail", styles["h1"]))
-    story.append(section_rule())
-    story.extend(detail_table("Revenue lines", income, styles, good_when_up=True, content_width=content_w))
+    # ── Income detail ──────────────────────────────────────────────────────
+    income_block = [
+        Paragraph("Revenue detail", styles["h1"]),
+        section_rule(),
+        *detail_table("Income lines", income, styles, good_when_up=True, content_width=content_w),
+    ]
+    story.append(KeepTogether(income_block))
 
-    # ── Expense detail ───────────────────────────────────────────────────────
-    story.append(Paragraph("Expense detail", styles["h1"]))
+    # ── Expense detail (COGS + OpEx) ────────────────────────────────────────
+    story.append(Paragraph("Cost & expense detail", styles["h1"]))
     story.append(section_rule())
     if cogs:
         story.extend(detail_table("Cost of goods sold", cogs, styles, good_when_up=False, content_width=content_w))
     if expenses:
         story.extend(detail_table("Operating expenses", expenses, styles, good_when_up=False, content_width=content_w))
 
-    # ── Questions ────────────────────────────────────────────────────────────
+    # ── Questions ──────────────────────────────────────────────────────────
     story.append(Paragraph("Questions for client call", styles["h1"]))
     story.append(section_rule())
-    story.append(
-        Paragraph(
-            "Optional checklist — use on the monthly close call. Strike what doesn’t apply.",
-            styles["draft_label"],
-        )
-    )
-    for i, q in enumerate(client_questions(parts), 1):
-        story.append(Paragraph(f"[ ]  {q}", styles["question"]))
+    for q in client_questions():
+        # Clean checkbox glyph (not ugly ASCII [ ])
+        story.append(Paragraph(f"○  {q}", styles["question"]))
 
-    # ── Disclaimer ───────────────────────────────────────────────────────────
-    story.append(Spacer(1, 16))
-    story.append(Paragraph("Disclaimer", styles["h1"]))
-    story.append(section_rule())
+    # ── Disclaimer ─────────────────────────────────────────────────────────
+    story.append(Spacer(1, 6))
     story.append(
         Paragraph(
-            "This ClosePack was prepared from the client’s bookkeeping records (QBO/Xero-style CSV export) "
-            f"by {FIRM_NAME} for discussion purposes. It is not an audit, review, or compilation under "
-            "professional standards, and it does not constitute tax, legal, or investment advice. "
-            "Draft commentary is a starting point for the bookkeeper’s own plain-English notes — "
-            "edit before client delivery. Figures may be rounded. "
-            "Waitlist &amp; product: https://pkdoddamani.github.io/closepack/",
+            f"Prepared by {FIRM_NAME} from the client’s bookkeeping records (QBO/Xero-style export) "
+            "for discussion purposes. Not an audit, review, or compilation; not tax, legal, or investment advice. "
+            "Figures may be rounded. Mar–Jun trend bars are demo synthetic history for this sample pack.",
             styles["disclaimer"],
         )
     )
@@ -694,48 +973,30 @@ def build_pdf(rows: list[LineItem], out_path: Path) -> None:
     def _footer(canvas, doc_):
         canvas.saveState()
         canvas.setStrokeColor(TEAL)
-        canvas.setLineWidth(1.5)
-        canvas.line(margin, 0.45 * inch, page_w - margin, 0.45 * inch)
-        canvas.setFont("Helvetica", 8)
+        canvas.setLineWidth(1.2)
+        y = 0.32 * inch
+        canvas.line(margin, y + 10, page_w - margin, y + 10)
+        canvas.setFont("Helvetica", 7.5)
         canvas.setFillColor(MUTED)
-        canvas.drawString(margin, 0.28 * inch, f"ClosePack · {CLIENT_NAME} · {PERIOD_LABEL}")
-        canvas.drawRightString(page_w - margin, 0.28 * inch, f"Page {doc_.page}")
+        # ClosePack ONLY in the small footer
+        canvas.drawString(margin, y, "Assembled with ClosePack · closepack.dev")
+        canvas.drawCentredString(page_w / 2, y, f"{CLIENT_NAME} · {PERIOD_LABEL}")
+        canvas.drawRightString(page_w - margin, y, f"Page {doc_.page}")
         canvas.restoreState()
 
-    def _first_page(canvas, doc_):
-        _footer(canvas, doc_)
-
-    doc.build(story, onFirstPage=_first_page, onLaterPages=_footer)
+    doc.build(story, onFirstPage=_footer, onLaterPages=_footer)
 
 
 def main() -> None:
     here = Path(__file__).resolve().parent
     parser = argparse.ArgumentParser(description="Build a ClosePack sample PDF from P&L CSV(s).")
-    parser.add_argument(
-        "--csv",
-        type=Path,
-        default=here / "harbor-bike-co-pl-aug-2026.csv",
-        help="Primary P&L CSV (Account + Aug + optional Jul columns)",
-    )
-    parser.add_argument(
-        "--prior-csv",
-        type=Path,
-        default=here / "harbor-bike-co-pl-jul-2026.csv",
-        help="Optional prior-month CSV (used if primary lacks Jul column)",
-    )
-    parser.add_argument(
-        "--out",
-        type=Path,
-        default=here / "Harbor-Bike-Co-ClosePack-Aug-2026.pdf",
-        help="Output PDF path",
-    )
+    parser.add_argument("--csv", type=Path, default=here / "harbor-bike-co-pl-aug-2026.csv")
+    parser.add_argument("--prior-csv", type=Path, default=here / "harbor-bike-co-pl-jul-2026.csv")
+    parser.add_argument("--out", type=Path, default=here / "Harbor-Bike-Co-ClosePack-Aug-2026.pdf")
     args = parser.parse_args()
 
     rows, _ = load_pl(args.csv)
-    # If prior column already present, merge is a no-op for those values;
-    # still merge to fill any zeros from a single-month primary.
     rows = merge_prior(rows, args.prior_csv if args.prior_csv.exists() else None)
-
     if not rows:
         raise SystemExit(f"No rows loaded from {args.csv}")
 
