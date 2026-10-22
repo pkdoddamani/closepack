@@ -41,6 +41,11 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://closepack.dev/blog/kpis-for-monthly-client-reports/</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://closepack.dev/sample-pack/Harbor-Bike-Co-ClosePack-Aug-2026.pdf</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
