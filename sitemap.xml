@@ -21,6 +21,16 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://closepack.dev/blog/monthly-commentary-clients-actually-read/</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://closepack.dev/blog/price-monthly-client-report-pack/</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://closepack.dev/blog/scaling-bookkeeping-practice-pack-vs-debrief/</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
